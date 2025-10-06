@@ -26,7 +26,6 @@
 #
 ######################################################################
 
-
 function _usage
     echo >&2
     echo "Usage: fetch.fish    " >&2
@@ -37,16 +36,14 @@ function _usage
     echo >&2
 end
 
-
 function _argparse_help
-    argparse -i 'h/help' -- $argv
+    argparse -i h/help -- $argv
 
     if set -q _flag_help
         _usage
         return 1
     end
 end
-
 
 function _argparse_file
     argparse -i \
@@ -62,11 +59,10 @@ function _argparse_file
     end
 end
 
-
 function _argparse_date
     argparse -i \
         'd/date=!string match -rq \'^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$\' "$_flag_value"' \
-        'l/latest' \
+        l/latest \
         -- $argv
 
     if set -q _flag_date
@@ -80,17 +76,14 @@ function _argparse_date
     end
 end
 
-
 function _get_file_dir -a file_name
-    echo "$file_name" | tr '.' '_'
+    echo "$file_name" | tr '.' _
 end
-
 
 function _get_patchfile -a file_name file_date
     set file_dir (_get_file_dir "$file_name")
     echo "$file_dir"/patches/(echo "$file_date" | tr '-' '/').patch.br
 end
-
 
 function _ensure_patch_exists -a file_name file_date
     set patchfile (_get_patchfile "$file_name" "$file_date")
@@ -102,7 +95,6 @@ function _ensure_patch_exists -a file_name file_date
         return 1
     end
 end
-
 
 function _make_patched_file -a file_name file_date
     set tmp_dir /tmp/(uuidgen)
@@ -118,8 +110,14 @@ function _make_patched_file -a file_name file_date
         brotli --force --decompress "$patchfile" \
             --output="$tmp_dir"/next.patch
 
-        patch "$tmp_dir"/"$file_name" \
-            < "$tmp_dir"/next.patch
+        set -l patch_date ( \
+            grep -E "^\+\+\+" "$tmp_dir"/next.patch | \
+            grep -Eo "[0-9]{4}-[0-9]{2}-[0-9]{2}\$")
+
+        echo "Patching $file_name to version $patch_date"
+
+        patch --quiet \
+            "$tmp_dir"/"$file_name" <"$tmp_dir"/next.patch
 
         if test -n "$file_date"
             if test "$patchfile" = "$final_patchfile"
@@ -135,11 +133,11 @@ function _make_patched_file -a file_name file_date
     end
 
     mkdir -p "$out_dir"
-    brotli -4f "$tmp_dir"/"$file_name" --output="$out_dir"/"$file_name".br
+    brotli -4f "$tmp_dir"/"$file_name" \
+        --output="$out_dir"/"$file_name".br
 
     rm -r "$tmp_dir"
 end
-
 
 function main
     _argparse_help $argv; or return 0
@@ -155,6 +153,5 @@ function main
     _make_patched_file "$file_name" "$file_date"
     or return 1
 end
-
 
 main $argv
