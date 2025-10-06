@@ -67,9 +67,7 @@ function _argparse_date
 
     if set -q _flag_date
         echo "$_flag_date"
-    else if set -q _flag_latest
-        # OK
-    else
+    else if not set -q _flag_latest
         echo -e "\nEither DATE or --latest flag must be specified" >&2
         _usage
         return 1
@@ -88,9 +86,7 @@ end
 function _ensure_patch_exists -a file_name file_date
     set patchfile (_get_patchfile "$file_name" "$file_date")
 
-    if test -e "$patchfile"
-        # OK
-    else
+    if not test -e "$patchfile"
         echo -e "\nNo patch exists for file $file_name date $file_date\n" >&2
         return 1
     end
@@ -111,7 +107,7 @@ function _make_patched_file -a file_name file_date
             --output="$tmp_dir"/next.patch
 
         set -l patch_date ( \
-            grep -E "^\+\+\+" "$tmp_dir"/next.patch | \
+            grep "^+++ " "$tmp_dir"/next.patch | \
             grep -Eo "[0-9]{4}-[0-9]{2}-[0-9]{2}\$")
 
         echo "Patching $file_name to version $patch_date"
@@ -119,10 +115,8 @@ function _make_patched_file -a file_name file_date
         patch --quiet \
             "$tmp_dir"/"$file_name" <"$tmp_dir"/next.patch
 
-        if test -n "$file_date"
-            if test "$patchfile" = "$final_patchfile"
-                break
-            end
+        if test -n "$file_date" -a "$patchfile" = "$final_patchfile"
+            break
         end
     end
 
